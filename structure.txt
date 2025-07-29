@@ -1,0 +1,19 @@
+.
+├── Dockerfile
+├── LICENSE
+├── README.md
+├── app.py
+├── config
+│   └── config.yaml
+├── main.py
+├── params.yaml
+├── requirements.txt
+├── research
+│   └── trials.ipynb
+├── setup.py
+├── src
+│   └── textsummarizer
+├── structure.txt
+└── template.py
+
+5 directories, 12 files
