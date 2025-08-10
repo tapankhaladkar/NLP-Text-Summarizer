@@ -15,3 +15,11 @@ class DataValidationConfig:
     STATUS_FILE: str
     ALL_REQUIRED_FILES: list[str]
     root_dir: Path = Path
+
+
+@dataclass(frozen=True)
+class DataTransformationConfig:
+    """Configuration for the script."""
+    tokenizer_name: Path
+    data_path: Path = Path
+    root_dir: Path = Path
