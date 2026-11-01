@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+
 @dataclass(frozen=True)
 class data_ingestionConfig:
     source_url: str
@@ -12,6 +13,7 @@ class data_ingestionConfig:
 @dataclass(frozen=True)
 class DataValidationConfig:
     """Configuration for data validation."""
+
     STATUS_FILE: str
     ALL_REQUIRED_FILES: list[str]
     root_dir: Path = Path
@@ -20,6 +22,7 @@ class DataValidationConfig:
 @dataclass(frozen=True)
 class DataTransformationConfig:
     """Configuration for the script."""
+
     tokenizer_name: Path
     data_path: Path = Path
     root_dir: Path = Path

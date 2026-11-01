@@ -1,6 +1,6 @@
-from textsummarizer.config.configuration import ConfigManager
 from textsummarizer.components.data_ingestion import DataIngestion
-from textsummarizer.logging import logger
+from textsummarizer.config.configuration import ConfigManager
+
 
 class DataIngestionPipeline:
     def __init__(self):

@@ -1,10 +1,10 @@
-import os
 # from os import path
 import logging
+import os
 
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s: %(message)s: ]')
+logging.basicConfig(level=logging.INFO, format="[%(asctime)s: %(message)s: ]")
 
-project_name = 'textsummarizer'
+project_name = "textsummarizer"
 
 list_files = [
     ".github/workflows/.gitkeep",
@@ -15,11 +15,11 @@ list_files = [
     f"src/{project_name}/logging/__init__.py",
     f"src/{project_name}/config/__init__.py",
     f"src/{project_name}/config/config.py",
-    f"src/{project_name}/pipeline/__init__.py", 
+    f"src/{project_name}/pipeline/__init__.py",
     f"src/{project_name}/entity/__init__.py",
     f"src/{project_name}/constants/__init__.py",
     "config/config.yaml",
-    'params.yaml',
+    "params.yaml",
     "app.py",
     "main.py",
     "Dockerfile",
@@ -33,15 +33,14 @@ for filepath in list_files:
     filepath = os.path.join(os.getcwd(), filepath)
     filedir, filename = os.path.split(filepath)
 
-    if filedir !="":
+    if filedir != "":
         os.makedirs(filedir, exist_ok=True)
         logging.info(f"Created directory: {filedir} for the file: {filename}")
 
     if (not os.path.exists(filepath)) or (os.path.getsize(filepath) == 0):
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             pass
             logging.info(f"Created empty file: {filepath}")
-
 
     else:
         logging.info(f"File {filepath} already exists and is not empty.")

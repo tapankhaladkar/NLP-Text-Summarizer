@@ -1,6 +1,6 @@
-from textsummarizer.config.configuration import ConfigManager
 from textsummarizer.components.data_transformation import DataTransformation
-from textsummarizer.logging import logger
+from textsummarizer.config.configuration import ConfigManager
+
 
 class DataTransformationPipeline:
     def __init__(self):

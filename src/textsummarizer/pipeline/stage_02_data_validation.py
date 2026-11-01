@@ -1,6 +1,6 @@
-from textsummarizer.config.configuration import ConfigManager
 from textsummarizer.components.data_validation import DataValidation
-from textsummarizer.logging import logger
+from textsummarizer.config.configuration import ConfigManager
+
 
 class DataValidationPipeline:
     def __init__(self):
