@@ -1,5 +1,14 @@
 ## Text Summarizer using NLP
 
+## Setup
+
+```bash
+uv sync --extra train
+uv run pytest
+uv run ruff check . && uv run ruff format --check .
+```
+
+Needs Python 3.11+. Installs CPU-only PyTorch; GPU training instructions arrive with Phase 2.
 
 ## Workflow
 

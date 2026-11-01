@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "textsummarizer"
+version = "0.1.0"
+description = "Dialogue summarization with a fine-tuned Pegasus model"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "tapankhaladkar", email = "tapankhaladkar@gmail.com" }]
+dependencies = [
+    "pyyaml>=6.0",
+    "python-box>=7.2",
+    "ensure>=1.0.4",
+]
+
+[project.optional-dependencies]
+train = [
+    "torch>=2.6",
+    "transformers[sentencepiece,torch]>=5.0,<6",
+    "datasets>=4.0,<6",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.8",
+]
+
+# uv only redirects *direct* dependencies, so torch must be listed in `train` above.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["research"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

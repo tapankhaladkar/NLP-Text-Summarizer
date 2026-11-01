@@ -175,3 +175,7 @@ cython_debug/
 
 artifacts/*
 # Ignore all files in the artifacts directory
+# macOS, runtime logs, experiment tracking
+.DS_Store
+logs/
+wandb/
