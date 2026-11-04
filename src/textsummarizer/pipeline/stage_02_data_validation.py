@@ -9,6 +9,7 @@ from textsummarizer.config import AppConfig
 def run(config: AppConfig) -> ValidationReport:
     settings = config.data_validation
     settings.root_dir.mkdir(parents=True, exist_ok=True)
+    settings.status_file.unlink(missing_ok=True)  # never leave a stale verdict if we crash
     report = DataValidation(settings).validate()
 
     lines = [f"Validation status: {report.ok}", *(f"- {problem}" for problem in report.problems)]

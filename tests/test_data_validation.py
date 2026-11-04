@@ -69,3 +69,25 @@ def test_stage_writes_true_status_for_good_data(app_config, make_dataset_dict):
     assert app_config.data_validation.status_file.read_text().splitlines() == [
         "Validation status: True"
     ]
+
+
+def test_non_string_text_column_is_reported(app_config, make_dataset_dict):
+    dd = make_dataset_dict()
+    dd["train"] = dd["train"].map(lambda row: {"dialogue": 7})
+    report = check(app_config, dd)
+    assert not report.ok
+    assert any("train" in p and "dialogue" in p for p in report.problems)
+
+
+def test_stage_removes_a_stale_status_file_when_validation_crashes(app_config, monkeypatch):
+    status = app_config.data_validation.status_file
+    status.parent.mkdir(parents=True)
+    status.write_text("Validation status: True\n")
+
+    def crash(self):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(DataValidation, "validate", crash)
+    with pytest.raises(RuntimeError):
+        stage_02_data_validation.run(app_config)
+    assert not status.exists()

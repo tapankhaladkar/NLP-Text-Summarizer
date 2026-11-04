@@ -46,3 +46,11 @@ def test_labels_are_the_tokenized_summary_not_the_dialogue(app_config, transform
     expected = tokenizer(text_target=row["summary"], max_length=4, truncation=True)["input_ids"]
     assert row["labels"] == expected
     assert row["labels"] != row["input_ids"][:4]
+
+
+def test_convert_can_be_run_twice(app_config, make_dataset_dict):
+    make_dataset_dict().save_to_disk(str(app_config.data_transformation.data_dir))
+    transformation = DataTransformation(app_config.data_transformation, app_config.tokenization)
+    transformation.convert()
+    out = transformation.convert()
+    assert load_from_disk(str(out))["train"].num_rows == 4

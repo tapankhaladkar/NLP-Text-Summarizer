@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass, field
 
-from datasets import Dataset, DatasetDict, load_from_disk
+from datasets import Dataset, DatasetDict, Value, load_from_disk
 
 from textsummarizer.config import ValidationConfig
 
@@ -54,8 +54,17 @@ class DataValidation:
         if dataset.num_rows != rows:
             problems.append(f"{split}: expected {rows} rows, found {dataset.num_rows}")
         for name in TEXT_COLUMNS:
-            if name in columns:
-                blanks = sum(1 for text in dataset[name] if text is None or not text.strip())
-                if blanks:
-                    problems.append(f"{split}: {blanks} row(s) with blank {name}")
+            if name not in columns:
+                continue
+            if not _is_text(dataset.features[name]):
+                found = getattr(dataset.features[name], "dtype", type(dataset.features[name]))
+                problems.append(f"{split}: column '{name}' must be text, found {found}")
+                continue
+            blanks = sum(1 for text in dataset[name] if text is None or not text.strip())
+            if blanks:
+                problems.append(f"{split}: {blanks} row(s) with blank {name}")
         return problems
+
+
+def _is_text(feature) -> bool:
+    return isinstance(feature, Value) and feature.dtype in ("string", "large_string")

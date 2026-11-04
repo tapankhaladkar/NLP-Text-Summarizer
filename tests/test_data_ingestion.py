@@ -60,3 +60,28 @@ def test_interrupted_save_leaves_no_output_and_the_next_run_recovers(app_config,
         app_config.data_ingestion, loader=lambda name, revision: make_dataset_dict()
     ).download()
     assert (output_dir / "dataset_dict.json").is_file()
+
+
+def test_output_from_another_revision_is_replaced(app_config, make_dataset_dict):
+    revisions = []
+
+    def loader(name, revision):
+        revisions.append(revision)
+        return make_dataset_dict()
+
+    DataIngestion(app_config.data_ingestion, loader=loader).download()
+    newer = app_config.data_ingestion.model_copy(update={"revision": "1" * 40})
+    DataIngestion(newer, loader=loader).download()
+    assert revisions == ["0" * 40, "1" * 40]
+
+
+def test_output_without_a_marker_is_replaced(app_config, make_dataset_dict):
+    make_dataset_dict().save_to_disk(str(app_config.data_ingestion.output_dir))  # old pipeline
+    revisions = []
+
+    def loader(name, revision):
+        revisions.append(revision)
+        return make_dataset_dict()
+
+    DataIngestion(app_config.data_ingestion, loader=loader).download()
+    assert revisions == ["0" * 40]
