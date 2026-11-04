@@ -20,6 +20,7 @@ VALIDATION = "stage_02_data_validation"
 TRANSFORMATION = "stage_03_data_transformation"
 TRAINER = "stage_04_model_trainer"
 EVALUATION = "stage_05_model_evaluation"
+PUBLISH = "stage_06_publish"
 
 
 class LogLevel(StrEnum):
@@ -116,6 +117,20 @@ def train(
 def evaluate(ctx: typer.Context) -> None:
     """Score the zero-shot baseline and the fine-tuned model on the full test split."""
     _run_stages(ctx, EVALUATION)
+
+
+@app.command()
+def publish(
+    ctx: typer.Context,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force/--no-force", help="Publish even if the model does not beat the baseline."
+        ),
+    ] = False,
+) -> None:
+    """Upload the fine-tuned model and its model card to the Hugging Face Hub (needs HF_TOKEN)."""
+    _run_stages(ctx, PUBLISH, force=force)
 
 
 @app.command("all")
