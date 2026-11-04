@@ -10,13 +10,23 @@ uv run ruff check . && uv run ruff format --check .
 
 Needs Python 3.11+. Installs CPU-only PyTorch; GPU training instructions arrive with Phase 2.
 
-## Workflow
+## Running the pipeline
 
-1. Update confi.yaml 
-2. Update params.yaml
-3. Update Entity.yaml
-4. Update the configuration manager in src config
-5. Update the components
-6. Update the pipeline
-7. Update main.py
-8. Update app.py
+```bash
+uv run textsummarizer all          # ingest, validate, transform; stops at the first failure
+uv run textsummarizer ingest       # or run one stage at a time:
+uv run textsummarizer validate     #   validate, transform
+uv run textsummarizer transform
+```
+
+Settings live in `config/config.yaml` and `params.yaml`. Outputs land in `artifacts/`:
+the downloaded dataset in `artifacts/data_ingestion/`, the validation result in
+`artifacts/data_validation/status.txt`, and the tokenized dataset in
+`artifacts/data_transformation/`. Re-running skips a stage's download if its output
+already exists; delete the folder to redo it.
+
+The data comes from the Hugging Face Hub copy of SAMSum (`knkarthick/samsum`, pinned
+to a revision), which is licensed CC BY-NC-ND 4.0: non-commercial use only.
+
+The notebooks in `research/` show the original, pre-refactor code and are kept as
+history; they no longer run against the current package API.
