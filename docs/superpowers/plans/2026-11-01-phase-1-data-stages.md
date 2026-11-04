@@ -303,9 +303,7 @@ def test_failed_load_leaves_no_output(app_config):
     assert not app_config.data_ingestion.output_dir.exists()
 
 
-def test_interrupted_save_leaves_no_output_and_the_next_run_recovers(
-    app_config, make_dataset_dict
-):
+def test_interrupted_save_leaves_no_output_and_the_next_run_recovers(app_config, make_dataset_dict):
     class DiesMidSave:
         def save_to_disk(self, path):
             Path(path).mkdir(parents=True)
@@ -313,7 +311,9 @@ def test_interrupted_save_leaves_no_output_and_the_next_run_recovers(
 
     output_dir = app_config.data_ingestion.output_dir
     with pytest.raises(OSError):
-        DataIngestion(app_config.data_ingestion, loader=lambda n, revision: DiesMidSave()).download()
+        DataIngestion(
+            app_config.data_ingestion, loader=lambda n, revision: DiesMidSave()
+        ).download()
     assert not output_dir.exists()
 
     DataIngestion(
@@ -399,7 +399,9 @@ def test_missing_column_names_split_and_column(app_config, make_dataset_dict):
     assert any("train" in p and "summary" in p for p in check(app_config, dd).problems)
 
 
-@pytest.mark.parametrize("column,value", [("summary", ""), ("dialogue", "  \n "), ("dialogue", None)])
+@pytest.mark.parametrize(
+    "column,value", [("summary", ""), ("dialogue", "  \n "), ("dialogue", None)]
+)
 def test_blank_or_null_text_is_reported(app_config, make_dataset_dict, column, value):
     dd = make_dataset_dict()
     dd["train"] = dd["train"].map(lambda row: {column: value} if row["id"] == "0" else {})
