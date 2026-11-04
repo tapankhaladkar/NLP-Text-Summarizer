@@ -29,3 +29,6 @@ def configure_logging(level: str = "INFO", log_file: Path | None = None) -> None
         setattr(handler, _MANAGED, True)
         logger.addHandler(handler)
     logger.setLevel(level.upper())
+    # Libraries such as transformers can install a handler on the root logger as a side
+    # effect; without this every line would be printed a second time in their format.
+    logger.propagate = False

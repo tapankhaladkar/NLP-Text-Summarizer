@@ -1,3 +1,4 @@
+import io
 import logging
 
 from textsummarizer.log import configure_logging
@@ -24,3 +25,15 @@ def test_nothing_is_written_without_a_log_file(tmp_path, monkeypatch):
     configure_logging()
     logging.getLogger("textsummarizer.test").info("stdout only")
     assert list(tmp_path.iterdir()) == []
+
+
+def test_a_root_handler_does_not_duplicate_package_logs():
+    stream = io.StringIO()
+    root_handler = logging.StreamHandler(stream)
+    logging.getLogger().addHandler(root_handler)
+    try:
+        configure_logging()
+        logging.getLogger("textsummarizer.test").info("once only")
+    finally:
+        logging.getLogger().removeHandler(root_handler)
+    assert stream.getvalue() == ""

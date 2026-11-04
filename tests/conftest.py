@@ -56,6 +56,7 @@ def reset_package_logging():
     for handler in list(package_logger.handlers):
         package_logger.removeHandler(handler)
         handler.close()
+    package_logger.propagate = True  # configure_logging turns it off; caplog needs it on
 
 
 @pytest.fixture(scope="session")
