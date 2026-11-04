@@ -4,13 +4,14 @@ from dataclasses import dataclass, field
 from datasets import Dataset, DatasetDict, Value, load_from_disk
 
 from textsummarizer.config import ValidationConfig
+from textsummarizer.errors import UserFacingError
 
 logger = logging.getLogger(__name__)
 
 TEXT_COLUMNS = ("dialogue", "summary")
 
 
-class DataValidationError(Exception):
+class DataValidationError(UserFacingError):
     """Raised by the validation stage when the dataset fails any check."""
 
 
