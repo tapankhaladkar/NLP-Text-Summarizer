@@ -32,7 +32,7 @@ Roadmap and spec for taking this repo from a half-built pipeline to a deployed d
 | # | Phase | Done when | Plan |
 |---|---|---|---|
 | 0 | Foundation: `pyproject.toml`/`uv`, ruff, pytest, CI | A clean checkout passes `uv sync --locked`, lint and tests in CI on 3.11 and 3.12 | `2026-10-19-phase-0-foundation.md`: implemented; GitHub CI unverified (the account's billing lock stopped the jobs from starting) |
-| 1 | Refactor stages 1-3: Pydantic config, import-safe logging, `textsummarizer` CLI, real data validation, Hub dataset ingestion, transformers-5 tokenization with dynamic padding and 512 max length | All three stages run end to end on CPU with tests on a tiny model | `2026-11-01-phase-1-data-stages.md` |
+| 1 | Refactor stages 1-3: Pydantic config, import-safe logging, `textsummarizer` CLI, real data validation, Hub dataset ingestion, transformers-5 tokenization with dynamic padding and 512 max length | All three stages run end to end on CPU with tests on a tiny model | `2026-11-01-phase-1-data-stages.md`: implemented and run end to end (37 tests; real run 13 s); GitHub CI unverified (billing lock) |
 | 2 | Train and evaluate: `Seq2SeqTrainer` stage, zero-shot baseline, ROUGE bug fix, full-test ROUGE + BERTScore, push model and card to the Hub | Hub repo exists; `metrics.json` shows fine-tuned beating the baseline with sane ROUGE | not yet written |
 | 3 | Predict and API: `Summarizer` class, FastAPI `/summarize` + `/health`, simple UI, API tests, CPU latency recorded | Local `curl` returns a summary | not yet written |
 | 4 | Container and deploy: multi-stage Dockerfile with CPU torch, container smoke test in CI, GHCR push, auto-deploy to the Space | Push to `main` produces a live URL with a passing health check | not yet written |
