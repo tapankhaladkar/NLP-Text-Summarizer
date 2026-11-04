@@ -57,6 +57,19 @@ Roadmap and spec for taking this repo from a half-built pipeline to a deployed d
 - **Evaluation:** a zero-shot baseline and the fine-tuned model scored on the full test split with identical generation settings. Split sentences on `<n>`/newlines for ROUGE-Lsum. Add BERTScore and a handful of hand-checked examples. Success means the fine-tuned model clearly beats the baseline. I expect a well-trained model to land in the high 40s to low 50s ROUGE-1 on SAMSum (from memory; check against published numbers).
 - **Tests without a GPU or a download:** unit tests use a tiny randomly initialized Pegasus built from a config, never the real checkpoint.
 
+## Carried over from the Phase 0 and Phase 1 reviews (decide in the next plans)
+
+- **Newlines (Phase 2, and Phase 3 inference must match):** Pegasus's tokenizer drops `\n`, so speaker-turn boundaries are lost. `<n>` is its newline token. Either map `\n` to `<n>` in `convert_examples_to_features` or document that turns are flattened.
+- **Relative paths (Phase 2):** artifact paths resolve against the current directory while the config file is found relative to the package, so running from another directory (including a subdirectory via `uv run`) creates a second `artifacts/` tree. Resolve them against the repo root, or say "run from the repo root" in the Colab notebook.
+- **Config sections (Phase 2):** `load_config` silently lets `params.yaml` override a section that also appears in `config.yaml`. Raise on overlap before adding training settings.
+- **Validation gating (Phase 2):** `transform` and a future `train` do not check `status.txt`. Decide whether `train` should.
+- **Small hardening, worth doing before Phase 2 reads the artifacts:**
+  - `save_dataset_dict`'s replace path can leave a half-deleted target if interrupted; rename the old target aside first and add a test that re-runs `convert()` over existing output.
+  - Validation crashes on a non-string text column instead of reporting it, and leaves a stale `status.txt`.
+  - Ingestion treats any existing output directory as done, including one from the old pipeline (14,732 train rows) or a different revision; write the revision to a marker file. The owner's Mac probably has such a folder, so delete the old `artifacts/` before the first run there.
+  - CLI errors that users can cause (missing config, failed validation, missing `train` extra) print full tracebacks; log one line with a hint.
+- **Phase 0 leftovers:** the `research` notebooks' dependencies (`nltk`, `evaluate`, `rouge-score`, `notebook`) were dropped with `requirements.txt` and Phase 2 evaluation needs the first three; CI actions are on the Node 20 runtime and the workflow has no `workflow_dispatch`; the README should say to install `uv` first.
+
 ## Risks
 
 - **CPU latency.** Measured above: 8 beams is too slow for a free CPU Space. Phase 3 picks the beam count from measurements, and falls back to a smaller model if 4 beams is still too slow.
