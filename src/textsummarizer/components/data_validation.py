@@ -1,30 +1,61 @@
-import os
+import logging
+from dataclasses import dataclass, field
 
-from textsummarizer.entity import DataValidationConfig
+from datasets import Dataset, DatasetDict, load_from_disk
+
+from textsummarizer.config import ValidationConfig
+
+logger = logging.getLogger(__name__)
+
+TEXT_COLUMNS = ("dialogue", "summary")
+
+
+class DataValidationError(Exception):
+    """Raised by the validation stage when the dataset fails any check."""
+
+
+@dataclass(frozen=True)
+class ValidationReport:
+    problems: list[str] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return not self.problems
 
 
 class DataValidation:
-    def __init__(self, config: DataValidationConfig):
+    """Check that the ingested dataset has the expected splits, columns, rows and text."""
+
+    def __init__(self, config: ValidationConfig):
         self.config = config
 
-    def validate_all_files_exist(self) -> bool:
-        """
-        Validates if all required files exist in the data directory.
-        """
+    def validate(self) -> ValidationReport:
+        data_dir = self.config.data_dir
         try:
-            validation_status = True
-            all_files = os.listdir(os.path.join("artifacts", "data_ingestion", "samsum_dataset"))
+            loaded = load_from_disk(str(data_dir))
+        except Exception as exc:
+            return ValidationReport([f"cannot load a dataset from {data_dir}: {exc}"])
+        if not isinstance(loaded, DatasetDict):
+            return ValidationReport([f"{data_dir} holds a single dataset, expected named splits"])
 
-            for file in all_files:
-                if file not in self.config.ALL_REQUIRED_FILES:
-                    validation_status = False
-                    with open(self.config.STATUS_FILE, "w") as f:
-                        f.write(f"Validation Status {validation_status}.\n")
+        expected = self.config.expected_rows
+        problems = [f"{split}: split is missing" for split in sorted(set(expected) - set(loaded))]
+        problems += [f"{split}: unexpected split" for split in sorted(set(loaded) - set(expected))]
+        for split, rows in expected.items():
+            if split in loaded:
+                problems += self._check_split(split, loaded[split], rows)
+        return ValidationReport(problems)
 
-                else:
-                    validation_status = True
-                    with open(self.config.STATUS_FILE, "w") as f:
-                        f.write(f"Validation Status {validation_status}.\n")
-            return validation_status
-        except Exception as e:
-            raise e
+    def _check_split(self, split: str, dataset: Dataset, rows: int) -> list[str]:
+        problems = []
+        columns, required = set(dataset.column_names), set(self.config.required_columns)
+        problems += [f"{split}: missing column '{name}'" for name in sorted(required - columns)]
+        problems += [f"{split}: unexpected column '{name}'" for name in sorted(columns - required)]
+        if dataset.num_rows != rows:
+            problems.append(f"{split}: expected {rows} rows, found {dataset.num_rows}")
+        for name in TEXT_COLUMNS:
+            if name in columns:
+                blanks = sum(1 for text in dataset[name] if text is None or not text.strip())
+                if blanks:
+                    problems.append(f"{split}: {blanks} row(s) with blank {name}")
+        return problems
