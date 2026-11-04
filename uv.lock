@@ -1970,6 +1970,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "python-box" },
     { name = "pyyaml" },
+    { name = "typer" },
 ]
 
 [package.optional-dependencies]
@@ -1995,6 +1996,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "torch", marker = "extra == 'train'", specifier = ">=2.6", index = "https://download.pytorch.org/whl/cpu" },
     { name = "transformers", extras = ["sentencepiece", "torch"], marker = "extra == 'train'", specifier = ">=5.0,<6" },
+    { name = "typer", specifier = ">=0.12" },
 ]
 provides-extras = ["train"]
 

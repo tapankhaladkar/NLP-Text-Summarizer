@@ -3,6 +3,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+import yaml
 from datasets import Dataset, DatasetDict
 from tokenizers import Tokenizer, models, pre_tokenizers
 from transformers import PreTrainedTokenizerFast
@@ -93,3 +94,14 @@ def app_config(tmp_path, tiny_tokenizer_dir) -> AppConfig:
         ),
         tokenization=TokenizationParams(max_input_length=6, max_target_length=4),
     )
+
+
+@pytest.fixture
+def config_files(app_config, tmp_path) -> tuple[Path, Path]:
+    """config.yaml and params.yaml on disk that load back into `app_config`."""
+    dumped = app_config.model_dump(mode="json")
+    params = {"tokenization": dumped.pop("tokenization")}
+    config_path, params_path = tmp_path / "config.yaml", tmp_path / "params.yaml"
+    config_path.write_text(yaml.safe_dump(dumped))
+    params_path.write_text(yaml.safe_dump(params))
+    return config_path, params_path
