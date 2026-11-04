@@ -54,12 +54,17 @@ Open `notebooks/colab_train.ipynb` in Google Colab with a **T4 GPU** runtime, ad
 Colab secret named `HF_TOKEN` (a Hugging Face token with write access), and run the cells.
 The full run takes roughly 1.5 to 3 hours. If something goes wrong:
 
-- **Loss turns into NaN:** set `training.fp16: false` in `params.yaml` and train again.
+- **Loss turns into NaN:** set `training.fp16: false` in `params.yaml`, delete
+  `artifacts/model_trainer/checkpoints`, and run `train` again. (Without `--resume`, `train`
+  refuses to reuse old checkpoints, and `--resume` refuses when the settings changed.)
 - **Out of GPU memory:** lower `per_device_train_batch_size` and raise
   `gradient_accumulation_steps` to keep their product at 16, or set
   `gradient_checkpointing: true`.
-- **The session disconnected:** run the notebook again and use `train --resume`. Mounting
-  Google Drive (the optional cell) keeps the checkpoints across disconnects.
+- **The session disconnected:** run the notebook again; `train --resume` continues from the
+  last epoch checkpoint if it is still there. The optional Drive cell keeps checkpoints across
+  disconnects, but with the default AdamW optimizer each checkpoint is roughly 7 GB and two
+  or three exist at once, which does not fit a free 15 GB Drive. Set `training.optim:
+  adafactor` (roughly 2.5 GB per checkpoint) before using it, or use a larger Drive plan.
 
 The notebooks in `research/` show the original, pre-refactor code and are kept as
 history; they no longer run against the current package API.

@@ -12,6 +12,7 @@ training:
   gradient_accumulation_steps: 4
   fp16: true  # applied only when CUDA is available
   gradient_checkpointing: false
+  optim: adamw_torch  # adafactor needs far less memory and disk: roughly 2.5 GB per checkpoint instead of 7
   eval_num_beams: 4
   seed: 42
   max_steps: -1  # a positive value overrides the epoch count (smoke runs)

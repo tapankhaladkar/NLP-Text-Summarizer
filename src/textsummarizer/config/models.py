@@ -79,6 +79,7 @@ class TrainingParams(_Frozen):
     gradient_accumulation_steps: int
     fp16: bool
     gradient_checkpointing: bool
+    optim: str
     eval_num_beams: int
     seed: int
     max_steps: int

@@ -93,7 +93,10 @@ def tiny_model_dir(tmp_path_factory, tiny_tokenizer_dir) -> Path:
     )
     torch.manual_seed(0)
     path = tmp_path_factory.mktemp("tiny_model")
-    PegasusForConditionalGeneration(config).save_pretrained(path)
+    model = PegasusForConditionalGeneration(config)
+    # Like the real checkpoint, the base model's own generation defaults differ from ours.
+    model.generation_config.min_length = 5
+    model.save_pretrained(path)
     tokenizer.save_pretrained(path)  # like a Hub checkpoint, the directory holds both
     return path
 
@@ -170,6 +173,7 @@ def app_config(tmp_path, tiny_tokenizer_dir, tiny_model_dir) -> AppConfig:
             gradient_accumulation_steps=1,
             fp16=False,
             gradient_checkpointing=False,
+            optim="adamw_torch",
             eval_num_beams=2,
             seed=42,
             max_steps=-1,
