@@ -5,7 +5,7 @@ from datasets import load_from_disk
 from typer.testing import CliRunner
 
 from textsummarizer.cli import app
-from textsummarizer.pipeline import stage_01_data_ingestion
+from textsummarizer.pipeline import stage_01_data_ingestion, stage_04_model_trainer
 from textsummarizer.storage import save_dataset_dict
 
 runner = CliRunner()
@@ -27,7 +27,7 @@ def stub_ingestion(monkeypatch, dataset_dict):
 def test_help_lists_the_stage_commands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for command in ("ingest", "validate", "transform", "all"):
+    for command in ("ingest", "validate", "transform", "all", "train"):
         assert command in result.output
 
 
@@ -107,3 +107,12 @@ def test_unexpected_errors_keep_their_traceback(monkeypatch, config_files):
 
 def test_unknown_log_level_is_a_usage_error():
     assert runner.invoke(app, ["--log-level", "verbose", "validate"]).exit_code == 2
+
+
+def test_train_forwards_the_resume_flag(monkeypatch, config_files):
+    seen = {}
+    monkeypatch.setattr(
+        stage_04_model_trainer, "run", lambda config, resume=False: seen.update(resume=resume)
+    )
+    assert invoke(config_files, "train", "--resume").exit_code == 0
+    assert seen == {"resume": True}

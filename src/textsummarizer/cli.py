@@ -18,6 +18,7 @@ app = typer.Typer(help="Run the dialogue-summarization data pipeline.", no_args_
 INGESTION = "stage_01_data_ingestion"
 VALIDATION = "stage_02_data_validation"
 TRANSFORMATION = "stage_03_data_transformation"
+TRAINER = "stage_04_model_trainer"
 
 
 class LogLevel(StrEnum):
@@ -45,13 +46,14 @@ def _fail(message: str, *args) -> NoReturn:
     raise typer.Exit(code=1) from None
 
 
-def _run_stages(ctx: typer.Context, *stages: str) -> None:
+def _run_stages(ctx: typer.Context, *stages: str, **stage_kwargs) -> None:
     """Run pipeline stages in order, stopping at the first failure.
 
     Stage modules are imported here, not at the top of the file, so that importing
     the CLI never loads datasets or transformers. `module.run` is looked up at call
-    time so tests can replace it. Failures the user can fix are logged as one line;
-    anything unexpected keeps its traceback.
+    time so tests can replace it; `stage_kwargs` are passed to every stage's `run`.
+    Failures the user can fix are logged as one line; anything unexpected keeps its
+    traceback.
     """
     config_path, params_path = ctx.obj
     try:
@@ -65,7 +67,7 @@ def _run_stages(ctx: typer.Context, *stages: str) -> None:
         for stage in stages:
             module = importlib.import_module(f"textsummarizer.pipeline.{stage}")
             logger.info(">>>>> %s started <<<<<", stage)
-            module.run(config)
+            module.run(config, **stage_kwargs)
             logger.info(">>>>> %s completed <<<<<", stage)
     except UserFacingError as exc:
         _fail("%s", exc)
@@ -96,6 +98,17 @@ def validate(ctx: typer.Context) -> None:
 def transform(ctx: typer.Context) -> None:
     """Tokenize the dataset into model features."""
     _run_stages(ctx, TRANSFORMATION)
+
+
+@app.command()
+def train(
+    ctx: typer.Context,
+    resume: Annotated[
+        bool, typer.Option("--resume/--no-resume", help="Continue from the last checkpoint.")
+    ] = False,
+) -> None:
+    """Fine-tune the model on the validated, tokenized data (needs a GPU for the full run)."""
+    _run_stages(ctx, TRAINER, resume=resume)
 
 
 @app.command("all")

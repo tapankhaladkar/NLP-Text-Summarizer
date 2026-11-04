@@ -3,11 +3,18 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+import torch
 import yaml
 from datasets import Dataset, DatasetDict
 from tokenizers import Tokenizer, models, pre_tokenizers
-from transformers import PreTrainedTokenizerFast
+from transformers import (
+    AutoTokenizer,
+    PegasusConfig,
+    PegasusForConditionalGeneration,
+    PreTrainedTokenizerFast,
+)
 
+from textsummarizer.components.data_transformation import DataTransformation
 from textsummarizer.config import (
     AppConfig,
     EvaluationConfig,
@@ -64,6 +71,32 @@ def tiny_tokenizer_dir(tmp_path_factory) -> Path:
     return path
 
 
+@pytest.fixture(scope="session")
+def tiny_model_dir(tmp_path_factory, tiny_tokenizer_dir) -> Path:
+    """A randomly initialized, ~30 KB Pegasus that shares the tiny tokenizer's vocabulary."""
+    tokenizer = AutoTokenizer.from_pretrained(tiny_tokenizer_dir)
+    config = PegasusConfig(
+        vocab_size=len(tokenizer),
+        d_model=16,
+        encoder_layers=1,
+        decoder_layers=1,
+        encoder_attention_heads=2,
+        decoder_attention_heads=2,
+        encoder_ffn_dim=32,
+        decoder_ffn_dim=32,
+        max_position_embeddings=32,
+        pad_token_id=tokenizer.pad_token_id,
+        eos_token_id=tokenizer.eos_token_id,
+        decoder_start_token_id=tokenizer.pad_token_id,
+        forced_eos_token_id=tokenizer.eos_token_id,
+    )
+    torch.manual_seed(0)
+    path = tmp_path_factory.mktemp("tiny_model")
+    PegasusForConditionalGeneration(config).save_pretrained(path)
+    tokenizer.save_pretrained(path)  # like a Hub checkpoint, the directory holds both
+    return path
+
+
 @pytest.fixture
 def make_dataset_dict() -> Callable[[dict[str, int] | None], DatasetDict]:
     def build(rows: dict[str, int] | None = None) -> DatasetDict:
@@ -74,7 +107,7 @@ def make_dataset_dict() -> Callable[[dict[str, int] | None], DatasetDict]:
 
 
 @pytest.fixture
-def app_config(tmp_path, tiny_tokenizer_dir) -> AppConfig:
+def app_config(tmp_path, tiny_tokenizer_dir, tiny_model_dir) -> AppConfig:
     artifacts = tmp_path / "artifacts"
     dataset_dir = artifacts / "data_ingestion" / "samsum_dataset"
     tokenized_dir = artifacts / "data_transformation" / "samsum_dataset"
@@ -106,7 +139,7 @@ def app_config(tmp_path, tiny_tokenizer_dir) -> AppConfig:
             root_dir=artifacts / "model_trainer",
             data_dir=tokenized_dir,
             status_file=status_file,
-            base_model="tiny/base",
+            base_model=str(tiny_model_dir),
             checkpoints_dir=artifacts / "model_trainer" / "checkpoints",
             model_dir=model_dir,
             metrics_file=artifacts / "model_trainer" / "train_metrics.json",
@@ -114,7 +147,7 @@ def app_config(tmp_path, tiny_tokenizer_dir) -> AppConfig:
         model_evaluation=EvaluationConfig(
             root_dir=artifacts / "model_evaluation",
             data_dir=tokenized_dir,
-            base_model="tiny/base",
+            base_model=str(tiny_model_dir),
             model_dir=model_dir,
             metrics_file=metrics_file,
             examples_file=artifacts / "model_evaluation" / "examples.md",
@@ -161,3 +194,14 @@ def config_files(app_config, tmp_path) -> tuple[Path, Path]:
     config_path.write_text(yaml.safe_dump(dumped))
     params_path.write_text(yaml.safe_dump(params))
     return config_path, params_path
+
+
+@pytest.fixture
+def prepared(app_config, make_dataset_dict) -> AppConfig:
+    """`app_config` with a tokenized dataset on disk and a passing validation status."""
+    make_dataset_dict().save_to_disk(str(app_config.data_transformation.data_dir))
+    DataTransformation(app_config.data_transformation, app_config.tokenization).convert()
+    status = app_config.data_validation.status_file
+    status.parent.mkdir(parents=True, exist_ok=True)
+    status.write_text("Validation status: True\n")
+    return app_config
