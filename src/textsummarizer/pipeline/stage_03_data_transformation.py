@@ -1,13 +1,9 @@
+from pathlib import Path
+
 from textsummarizer.components.data_transformation import DataTransformation
-from textsummarizer.config.configuration import ConfigManager
+from textsummarizer.config import AppConfig
 
 
-class DataTransformationPipeline:
-    def __init__(self):
-        pass
-
-    def main(self):
-        config = ConfigManager()
-        data_transformation_config = config.get_data_transformation_config()
-        data_transformation = DataTransformation(config=data_transformation_config)
-        data_transformation.convert()
+def run(config: AppConfig) -> Path:
+    config.data_transformation.root_dir.mkdir(parents=True, exist_ok=True)
+    return DataTransformation(config.data_transformation, config.tokenization).convert()

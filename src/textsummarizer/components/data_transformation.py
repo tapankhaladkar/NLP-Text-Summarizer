@@ -1,39 +1,44 @@
+import logging
 from pathlib import Path
 
 from datasets import load_from_disk
 from transformers import AutoTokenizer
 
-from textsummarizer.entity import DataTransformationConfig
+from textsummarizer.config import TokenizationParams, TransformationConfig
+from textsummarizer.storage import save_dataset_dict
+
+logger = logging.getLogger(__name__)
 
 
 class DataTransformation:
-    """Class for transforming data for text summarization."""
+    """Tokenize dialogues and summaries into model features for seq2seq training."""
 
-    def __init__(self, config: DataTransformationConfig):
+    def __init__(self, config: TransformationConfig, params: TokenizationParams):
         self.config = config
-        self.tokenizer = AutoTokenizer.from_pretrained(self.config.tokenizer_name)
+        self.params = params
+        self.tokenizer = AutoTokenizer.from_pretrained(config.tokenizer_name)
 
-    def convert_examples_to_features(self, example_batch):
-        input_encodings = self.tokenizer(
-            example_batch["dialogue"], max_length=1024, truncation=True
+    def convert_examples_to_features(self, batch: dict[str, list]) -> dict[str, list]:
+        inputs = self.tokenizer(
+            batch["dialogue"], max_length=self.params.max_input_length, truncation=True
         )
-
-        with self.tokenizer.as_target_tokenizer():
-            target_encodings = self.tokenizer(
-                example_batch["summary"], max_length=128, truncation=True
-            )
-
+        labels = self.tokenizer(
+            text_target=batch["summary"], max_length=self.params.max_target_length, truncation=True
+        )
         return {
-            "input_ids": input_encodings["input_ids"],
-            "attention_mask": input_encodings["attention_mask"],
-            "labels": target_encodings["input_ids"],
+            "input_ids": inputs["input_ids"],
+            "attention_mask": inputs["attention_mask"],
+            "labels": labels["input_ids"],
         }
 
-    def convert(self):
-        dataset_samsum = load_from_disk(self.config.data_path)
-        dataset_samsum_pt = dataset_samsum.map(
-            self.convert_examples_to_features,
-            batched=True,
+    def convert(self) -> Path:
+        dataset_dict = load_from_disk(str(self.config.data_dir))
+        # keep_in_memory: otherwise datasets writes cache-*.arrow files next to the source data
+        features = dataset_dict.map(
+            self.convert_examples_to_features, batched=True, keep_in_memory=True
         )
-
-        dataset_samsum_pt.save_to_disk(str(Path(self.config.root_dir) / "samsum_dataset"))
+        output_dir = self.config.output_dir
+        output_dir.parent.mkdir(parents=True, exist_ok=True)
+        save_dataset_dict(features, output_dir)
+        logger.info("Saved tokenized dataset to %s", output_dir)
+        return output_dir
