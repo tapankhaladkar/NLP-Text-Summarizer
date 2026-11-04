@@ -33,7 +33,7 @@ Roadmap and spec for taking this repo from a half-built pipeline to a deployed d
 |---|---|---|---|
 | 0 | Foundation: `pyproject.toml`/`uv`, ruff, pytest, CI | A clean checkout passes `uv sync --locked`, lint and tests in CI on 3.11 and 3.12 | `2026-10-19-phase-0-foundation.md`: implemented; GitHub CI unverified (the account's billing lock stopped the jobs from starting) |
 | 1 | Refactor stages 1-3: Pydantic config, import-safe logging, `textsummarizer` CLI, real data validation, Hub dataset ingestion, transformers-5 tokenization with dynamic padding and 512 max length | All three stages run end to end on CPU with tests on a tiny model | `2026-11-01-phase-1-data-stages.md`: implemented and run end to end (37 tests; real run 13 s); GitHub CI unverified (billing lock) |
-| 2 | Train and evaluate: `Seq2SeqTrainer` stage, zero-shot baseline, ROUGE bug fix, full-test ROUGE + BERTScore, push model and card to the Hub | Hub repo exists; `metrics.json` shows fine-tuned beating the baseline with sane ROUGE | `2026-11-04-phase-2-train-evaluate.md`: code implemented (88 tests) and smoke-tested on CPU with the real checkpoint; Colab training run pending; GitHub CI unverified (billing lock) |
+| 2 | Train and evaluate: `Seq2SeqTrainer` stage, zero-shot baseline, ROUGE bug fix, full-test ROUGE + BERTScore, push model and card to the Hub | Hub repo exists; `metrics.json` shows fine-tuned beating the baseline with sane ROUGE | `2026-11-04-phase-2-train-evaluate.md`: code implemented (93 tests), reviewed, fixed and smoke-tested on CPU with the real checkpoint; Colab training run pending; GitHub CI unverified (billing lock) |
 | 3 | Predict and API: `Summarizer` class, FastAPI `/summarize` + `/health`, simple UI, API tests, CPU latency recorded | Local `curl` returns a summary | not yet written |
 | 4 | Container and deploy: multi-stage Dockerfile with CPU torch, container smoke test in CI, GHCR push, auto-deploy to the Space | Push to `main` produces a live URL with a passing health check | not yet written |
 | 5 | Polish: README with architecture, metrics, demo link, license note; optional model comparison | A stranger can understand and try it in two minutes | not yet written |
@@ -69,6 +69,17 @@ Roadmap and spec for taking this repo from a half-built pipeline to a deployed d
   - Ingestion treats any existing output directory as done, including one from the old pipeline (14,732 train rows) or a different revision; write the revision to a marker file. The owner's Mac probably has such a folder, so delete the old `artifacts/` before the first run there.
   - CLI errors that users can cause (missing config, failed validation, missing `train` extra) print full tracebacks; log one line with a hint.
 - **Phase 0 leftovers:** the `research` notebooks' dependencies (`nltk`, `evaluate`, `rouge-score`, `notebook`) were dropped with `requirements.txt` and Phase 2 evaluation needs the first three; CI actions are on the Node 20 runtime and the workflow has no `workflow_dispatch`; the README should say to install `uv` first.
+
+## Carried over from the Phase 2 review (not yet done)
+
+- **NaN guard:** nothing stops a training run whose loss turns non-finite (fp16 on a T4 is the known risk); it would burn hours and only the publish gate would catch it. Add a `TrainerCallback` that stops on a non-finite loss early.
+- **Publish consistency:** `publish` does not check that `metrics.json` belongs to the current model (retraining without re-evaluating uploads new weights with old metrics). Compare `metrics["fine_tuned"]["model"]` and the file times. Also skip `training_args.bin` when uploading, add an inference snippet to the model card that states the 512-token truncation Phase 3 must match, and give `license: other` a `license_name`.
+- **Stale validation:** `train` trusts a `status.txt` that predates a re-ingest; `ingest` and `transform` do not invalidate it.
+- **Colab notebook:** rerunning the clone cell in the same session fails (`git clone` into an existing folder, nested `%cd`); the import-error hint should also mention `pip install -e ".[train]"`.
+- **Evaluation cost:** `trainer.evaluate()` after training repeats a full validation generation pass that `trainer.state.log_history` already holds, and `ModelEvaluation` generates in fp32 without sorting by length; both are slow on a T4.
+- **Test depth:** the notebook test matches command names as substrings of the help text and ignores flags.
+- **README accuracy:** the sentence "Re-running skips a stage's download if its output already exists; delete the folder to redo it" no longer matches (ingest skips only when the revision marker matches; transform always reruns).
+- **Time estimate:** the 1.5 to 3 hour Colab estimate may be optimistic (three epochs plus per-epoch validation generation, a final validation pass and two full 8-beam test passes) and free Colab sessions have limits; treat the first real run as the measurement.
 
 ## Risks
 
