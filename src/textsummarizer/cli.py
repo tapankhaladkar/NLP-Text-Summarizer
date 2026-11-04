@@ -19,6 +19,7 @@ INGESTION = "stage_01_data_ingestion"
 VALIDATION = "stage_02_data_validation"
 TRANSFORMATION = "stage_03_data_transformation"
 TRAINER = "stage_04_model_trainer"
+EVALUATION = "stage_05_model_evaluation"
 
 
 class LogLevel(StrEnum):
@@ -109,6 +110,12 @@ def train(
 ) -> None:
     """Fine-tune the model on the validated, tokenized data (needs a GPU for the full run)."""
     _run_stages(ctx, TRAINER, resume=resume)
+
+
+@app.command()
+def evaluate(ctx: typer.Context) -> None:
+    """Score the zero-shot baseline and the fine-tuned model on the full test split."""
+    _run_stages(ctx, EVALUATION)
 
 
 @app.command("all")

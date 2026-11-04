@@ -27,7 +27,7 @@ def stub_ingestion(monkeypatch, dataset_dict):
 def test_help_lists_the_stage_commands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for command in ("ingest", "validate", "transform", "all", "train"):
+    for command in ("ingest", "validate", "transform", "all", "train", "evaluate"):
         assert command in result.output
 
 
