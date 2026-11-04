@@ -1,33 +1,36 @@
-import os
-import urllib.request as request
-import zipfile
+import logging
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
-from textsummarizer.entity import data_ingestionConfig
-from textsummarizer.logging import logger
-from textsummarizer.utils.common import get_size
+from textsummarizer.config import IngestionConfig
+from textsummarizer.storage import save_dataset_dict
+
+logger = logging.getLogger(__name__)
 
 
 class DataIngestion:
-    def __init__(self, config: data_ingestionConfig):
+    """Download the pinned dataset revision from the Hugging Face Hub to disk."""
+
+    def __init__(self, config: IngestionConfig, loader: Callable[..., Any] | None = None):
         self.config = config
+        self._loader = loader
 
-    def download_data(self):
-        if not os.path.exists(self.config.local_data_file):
-            filename, headers = request.urlretrieve(
-                self.config.source_url, self.config.local_data_file
-            )
-            logger.info(f"{filename} downloaded! with following info: \n{headers}")
-        else:
-            logger.info(
-                f"File already exists of size: {get_size(Path(self.config.local_data_file))}"
-            )
+    def download(self) -> Path:
+        output_dir = self.config.output_dir
+        if output_dir.exists():
+            logger.info("Dataset already present at %s; skipping download", output_dir)
+            return output_dir
 
-    def extract_zip_file(self):
-        if not os.path.exists(self.config.unzip_dir):
-            os.makedirs(self.config.unzip_dir)
-            logger.info(f"Created directory: {self.config.unzip_dir}")
+        loader = self._loader
+        if loader is None:
+            from datasets import load_dataset
 
-        with zipfile.ZipFile(self.config.local_data_file, "r") as zip_ref:
-            zip_ref.extractall(self.config.unzip_dir)
-            logger.info(f"Extracted files to {self.config.unzip_dir}")
+            loader = load_dataset
+        logger.info("Loading %s at revision %s", self.config.dataset_name, self.config.revision)
+        dataset_dict = loader(self.config.dataset_name, revision=self.config.revision)
+
+        output_dir.parent.mkdir(parents=True, exist_ok=True)
+        save_dataset_dict(dataset_dict, output_dir)
+        logger.info("Saved dataset to %s", output_dir)
+        return output_dir
