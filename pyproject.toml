@@ -24,6 +24,8 @@ train = [
     "torch>=2.6",
     "transformers[sentencepiece,torch]>=5.0,<6",
     "datasets>=4.0,<6",
+    "rouge-score>=0.1.2",
+    "bert-score>=0.3.13",
 ]
 
 [dependency-groups]

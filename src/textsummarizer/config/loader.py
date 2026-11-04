@@ -11,10 +11,19 @@ def load_config(
 ) -> AppConfig:
     """Read config.yaml and params.yaml into one validated AppConfig.
 
-    Pure: reads two files and creates nothing on disk.
+    Relative paths resolve against the repository root (the directory above the config
+    file's directory), never the current working directory. A section that appears in
+    both files is an error. Pure: reads two files and creates nothing on disk.
     """
-    merged = {**_read_yaml(config_path), **_read_yaml(params_path)}
-    return AppConfig.model_validate(merged)
+    config_data, params_data = _read_yaml(config_path), _read_yaml(params_path)
+    overlap = sorted(set(config_data) & set(params_data))
+    if overlap:
+        raise ValueError(
+            f"sections defined in both {Path(config_path).name} and "
+            f"{Path(params_path).name}: {', '.join(overlap)}"
+        )
+    base_dir = Path(config_path).resolve().parent.parent
+    return AppConfig.model_validate({**config_data, **params_data}, context={"base_dir": base_dir})
 
 
 def _read_yaml(path: Path) -> dict:

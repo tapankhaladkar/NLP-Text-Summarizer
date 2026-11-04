@@ -10,8 +10,14 @@ from transformers import PreTrainedTokenizerFast
 
 from textsummarizer.config import (
     AppConfig,
+    EvaluationConfig,
+    EvaluationParams,
+    GenerationParams,
     IngestionConfig,
+    PublishConfig,
     TokenizationParams,
+    TrainerConfig,
+    TrainingParams,
     TransformationConfig,
     ValidationConfig,
 )
@@ -71,6 +77,10 @@ def make_dataset_dict() -> Callable[[dict[str, int] | None], DatasetDict]:
 def app_config(tmp_path, tiny_tokenizer_dir) -> AppConfig:
     artifacts = tmp_path / "artifacts"
     dataset_dir = artifacts / "data_ingestion" / "samsum_dataset"
+    tokenized_dir = artifacts / "data_transformation" / "samsum_dataset"
+    status_file = artifacts / "data_validation" / "status.txt"
+    model_dir = artifacts / "model_trainer" / "model"
+    metrics_file = artifacts / "model_evaluation" / "metrics.json"
     return AppConfig(
         artifacts_root=artifacts,
         data_ingestion=IngestionConfig(
@@ -82,17 +92,61 @@ def app_config(tmp_path, tiny_tokenizer_dir) -> AppConfig:
         data_validation=ValidationConfig(
             root_dir=artifacts / "data_validation",
             data_dir=dataset_dir,
-            status_file=artifacts / "data_validation" / "status.txt",
+            status_file=status_file,
             required_columns=["id", "dialogue", "summary"],
             expected_rows={"train": 4, "validation": 2, "test": 2},
         ),
         data_transformation=TransformationConfig(
             root_dir=artifacts / "data_transformation",
             data_dir=dataset_dir,
-            output_dir=artifacts / "data_transformation" / "samsum_dataset",
+            output_dir=tokenized_dir,
             tokenizer_name=str(tiny_tokenizer_dir),
         ),
+        model_trainer=TrainerConfig(
+            root_dir=artifacts / "model_trainer",
+            data_dir=tokenized_dir,
+            status_file=status_file,
+            base_model="tiny/base",
+            checkpoints_dir=artifacts / "model_trainer" / "checkpoints",
+            model_dir=model_dir,
+            metrics_file=artifacts / "model_trainer" / "train_metrics.json",
+        ),
+        model_evaluation=EvaluationConfig(
+            root_dir=artifacts / "model_evaluation",
+            data_dir=tokenized_dir,
+            base_model="tiny/base",
+            model_dir=model_dir,
+            metrics_file=metrics_file,
+            examples_file=artifacts / "model_evaluation" / "examples.md",
+        ),
+        publish=PublishConfig(
+            model_dir=model_dir,
+            metrics_file=metrics_file,
+            repo_id="me/pegasus-samsum",
+            private=False,
+        ),
         tokenization=TokenizationParams(max_input_length=6, max_target_length=4),
+        training=TrainingParams(
+            num_train_epochs=1,
+            learning_rate=1e-3,
+            warmup_steps=0.1,
+            weight_decay=0.0,
+            per_device_train_batch_size=2,
+            per_device_eval_batch_size=2,
+            gradient_accumulation_steps=1,
+            fp16=False,
+            gradient_checkpointing=False,
+            eval_num_beams=2,
+            seed=42,
+            max_steps=-1,
+            max_train_samples=None,
+            max_eval_samples=None,
+            report_to="none",
+        ),
+        generation=GenerationParams(num_beams=2, max_length=8, min_length=0, length_penalty=1.0),
+        evaluation=EvaluationParams(
+            batch_size=2, max_test_samples=None, num_examples=3, bertscore_model=None
+        ),
     )
 
 
@@ -100,7 +154,9 @@ def app_config(tmp_path, tiny_tokenizer_dir) -> AppConfig:
 def config_files(app_config, tmp_path) -> tuple[Path, Path]:
     """config.yaml and params.yaml on disk that load back into `app_config`."""
     dumped = app_config.model_dump(mode="json")
-    params = {"tokenization": dumped.pop("tokenization")}
+    params = {
+        name: dumped.pop(name) for name in ("tokenization", "training", "generation", "evaluation")
+    }
     config_path, params_path = tmp_path / "config.yaml", tmp_path / "params.yaml"
     config_path.write_text(yaml.safe_dump(dumped))
     params_path.write_text(yaml.safe_dump(params))

@@ -23,7 +23,8 @@ Settings live in `config/config.yaml` and `params.yaml`. Outputs land in `artifa
 the downloaded dataset in `artifacts/data_ingestion/`, the validation result in
 `artifacts/data_validation/status.txt`, and the tokenized dataset in
 `artifacts/data_transformation/`. Re-running skips a stage's download if its output
-already exists; delete the folder to redo it.
+already exists; delete the folder to redo it. Relative paths in `config/config.yaml`
+resolve against the repository root, so the commands work from any directory.
 
 The data comes from the Hugging Face Hub copy of SAMSum (`knkarthick/samsum`, pinned
 to a revision), which is licensed CC BY-NC-ND 4.0: non-commercial use only.
